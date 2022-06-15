@@ -1,48 +1,94 @@
-const {
-  MongoClient
-} = require('mongodb');
-// or as an es module:
-// import { MongoClient } from 'mongodb'
+// Using Node.js `require()`
 
-// Connection URL
-const url = 'mongodb://localhost:27017';
-const client = new MongoClient(url);
+const mongoose = require('mongoose');
 
-// Database Name
-const dbName = 'fruitsDB';
+main().catch(err => console.log(err));
 
 async function main() {
-  // Use connect method to connect to the server
-  await client.connect();
-  console.log('Connected successfully to server');
-  const db = client.db(dbName);
-  const collection = db.collection('fruits');
+  await mongoose.connect('mongodb://localhost:27017/fruitsDB');
+  console.log("Success conection to DB");
 
-  // the following code examples can be pasted here...
-
-  //Insert a Document
-  const insertResult = await collection.insertMany([{
-      name: "Apple",
-      score: 8,
-      review: "Great fruit"
+  //Mongoose Fruit Schema
+  const fruitSchema = new mongoose.Schema({
+    name: {
+      type: String,
+      required: [true, "Please check your data entry, no name specified"]
     },
-    {
-      name: "orange",
-      score: 6,
-      review: "Great stuff"
+    rating: {
+      type: Number,
+      min: 1,
+      max: 10
+    },
+    review: String
+  });
+  //compiling fruis schema into a Model.
+  const Fruit = mongoose.model("Fruit", fruitSchema);
+
+  const apple = new Fruit({
+    name: "apple",
+    rating: 10,
+    review: "Yami"
+  });
+
+    await apple.save();
+
+  //Mongoose Person Schema
+  const personSchema = new mongoose.Schema({
+    name: String,
+    age: Number,
+    favouriteFruite: fruitSchema
+  });
+  //Compiling Person schema into a Model.
+  const Person = mongoose.model("Person", personSchema);
+
+  const person = new Person({
+    name: "Amy",
+    rating: 37,
+    favouriteFruite: apple
+  });
+
+  // await person.save();
+
+  //Update colection.
+  Person.updateOne({_id: "62a8d557f9a56c13bc7f8e20"},{favouriteFruite: apple}, (err)=>{
+    if (err) {
+      console.log(err);
+    }else{
+      console.log("Successfully updated the document");
+
+  }})
+
+  // Delete one documetn.
+  Fruit.deleteOne({name: "Pitch"}, err=>{
+    if (err) {
+      console.log(err);
+    }else{
+      console.log("Successfully deleted the document.");
     }
-  ]);
-  console.log('Inserted documents =>', insertResult);
+  });
 
-  //Find Documents with a Query Filter
-  const filteredDocs = await collection.find({ }).toArray();
-  console.log('Found documents =>', filteredDocs);
+// Delete many documents
+Fruit.deleteMany({__V: "0"}, err=>{
+  if (err) {
+    console.log(err);
+  }else{
+    console.log("Deleted all documents");
+  }
+});
 
-  return 'done.';
+  // Find colection in DB
+  Fruit.find((err, fruits) => {
+    if (err) {
+      console.log(err);
+    } else {
+
+      mongoose.connection.close();
+
+      fruits.forEach((fruit) => {
+        console.log(fruit.name);
+      });
+    }
+  });
+
+
 }
-
-
-main()
-  .then(console.log)
-  .catch(console.error)
-  .finally(() => client.close());
